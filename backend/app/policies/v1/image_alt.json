@@ -1,0 +1,10 @@
+{
+  "name": "image_alt",
+  "feature": "missing_alt_images_count",
+  "category": "accessibility",
+  "severity": "warning",
+  "weight": 2,
+  "max_value": 0,
+  "recommendation": "Provide descriptive 'alt' attribute text for all <img> tags to improve web accessibility.",
+  "expected_display": "0 missing ALT tags"
+}

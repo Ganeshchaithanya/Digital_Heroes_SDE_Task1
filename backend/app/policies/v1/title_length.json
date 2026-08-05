@@ -1,0 +1,11 @@
+{
+  "name": "title_length",
+  "feature": "title_length",
+  "category": "seo",
+  "severity": "critical",
+  "weight": 3,
+  "min_value": 30,
+  "max_value": 60,
+  "recommendation": "Ensure page title length is between 30 and 60 characters for optimal search engine snippet display.",
+  "expected_display": "30 to 60 characters"
+}

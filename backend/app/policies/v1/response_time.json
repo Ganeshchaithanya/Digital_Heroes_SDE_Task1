@@ -1,0 +1,10 @@
+{
+  "name": "response_time",
+  "feature": "response_time_ms",
+  "category": "performance",
+  "severity": "critical",
+  "weight": 3,
+  "max_value": 2000,
+  "recommendation": "Optimize server response time and static delivery to achieve initial response under 2000ms (2 seconds).",
+  "expected_display": "Under 2000ms"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "word_count",
+  "feature": "word_count",
+  "category": "content",
+  "severity": "info",
+  "weight": 1,
+  "min_value": 300,
+  "recommendation": "Provide sufficient written content (at least 300 words) for meaningful indexing and user value.",
+  "expected_display": "At least 300 words"
+}

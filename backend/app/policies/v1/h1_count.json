@@ -1,0 +1,11 @@
+{
+  "name": "h1_count",
+  "feature": "h1_count",
+  "category": "seo",
+  "severity": "critical",
+  "weight": 3,
+  "min_value": 1,
+  "max_value": 1,
+  "recommendation": "Use exactly one <h1> heading per page as the primary headline.",
+  "expected_display": "Exactly 1 H1 element"
+}

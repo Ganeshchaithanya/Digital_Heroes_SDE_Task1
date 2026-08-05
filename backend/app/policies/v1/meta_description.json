@@ -1,0 +1,11 @@
+{
+  "name": "meta_description",
+  "feature": "meta_description_length",
+  "category": "seo",
+  "severity": "warning",
+  "weight": 2,
+  "min_value": 70,
+  "max_value": 160,
+  "recommendation": "Provide a meta description between 70 and 160 characters to summarize page content effectively.",
+  "expected_display": "70 to 160 characters"
+}
