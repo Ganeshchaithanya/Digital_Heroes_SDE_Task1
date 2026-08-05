@@ -64,17 +64,26 @@ class HTMLParser:
         # 6. Smart Image Extraction (Differentiating Decorative & Missing ALT)
         images: List[ImageInfo] = []
         for img in soup.find_all("img"):
-            src = img.get("src") or ""
-            if src:
+            raw_src = img.get("src")
+            src = (raw_src[0] if isinstance(raw_src, list) else raw_src) or ""
+            if src and isinstance(src, str):
                 full_src = urljoin(base_url, src)
-                alt_attr = img.get("alt")
-                role_attr = (img.get("role") or "").lower()
-                aria_hidden = (img.get("aria-hidden") or "").lower() == "true"
+                raw_alt = img.get("alt")
+                alt_attr = (raw_alt[0] if isinstance(raw_alt, list) else raw_alt)
+                
+                raw_role = img.get("role")
+                role_val = (raw_role[0] if isinstance(raw_role, list) else raw_role) or ""
+                role_attr = role_val.lower() if isinstance(role_val, str) else ""
+
+                raw_aria = img.get("aria-hidden")
+                aria_val = (raw_aria[0] if isinstance(raw_aria, list) else raw_aria) or ""
+                aria_hidden = (aria_val.lower() == "true") if isinstance(aria_val, str) else False
 
                 # Check if image is decorative (alt="", role="presentation", role="none", aria-hidden="true")
                 is_decorative = (alt_attr == "") or (role_attr in ["presentation", "none"]) or aria_hidden
                 
-                alt_cleaned = clean_text(alt_attr) if alt_attr is not None else None
+                alt_str = alt_attr if isinstance(alt_attr, str) else (" ".join(alt_attr) if isinstance(alt_attr, list) else None)
+                alt_cleaned = clean_text(alt_str) if alt_str is not None else None
                 has_alt = bool(alt_cleaned) or is_decorative
 
                 images.append(ImageInfo(
@@ -87,8 +96,9 @@ class HTMLParser:
         # 7. Extract Links
         links: List[LinkInfo] = []
         for a in soup.find_all("a", href=True):
-            href = a.get("href") or ""
-            if href and not href.startswith(("javascript:", "mailto:", "tel:", "#")):
+            raw_href = a.get("href")
+            href = (raw_href[0] if isinstance(raw_href, list) else raw_href) or ""
+            if href and isinstance(href, str) and not href.startswith(("javascript:", "mailto:", "tel:", "#")):
                 full_href = urljoin(base_url, href)
                 link_domain = urlparse(full_href).netloc.lower()
                 is_internal = (link_domain == base_domain or link_domain == "")
