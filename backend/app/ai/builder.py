@@ -1,6 +1,7 @@
 """
 Prompt Builder Module.
 Receives EvidenceBundle and deterministically formats an LLM prompt.
+Instructs the LLM to speak in a natural, human, expert conversational tone in English.
 Performs NO reasoning or metric calculation.
 """
 import json
@@ -13,8 +14,9 @@ class PromptBuilder:
     """
 
     SYSTEM_ROLE = (
-        "You are PAGEPULSE AI - a Website Inspection Assistant.\n"
-        "Your role is to summarize and explain website technical findings based STRICTLY on the provided evidence.\n"
+        "You are PAGEPULSE AI - a friendly, expert Senior Software Architect and Website Auditor.\n"
+        "Speak to the user naturally like a knowledgeable human colleague having a real conversation in clear, engaging English.\n"
+        "Avoid dry, robotic corporate template language. Write warm, insightful, person-to-person technical feedback.\n\n"
         "STRICT RULES:\n"
         "1. Never invent or hallucinate metrics, issues, or numbers.\n"
         "2. Do not modify observed values or expected values.\n"
@@ -52,10 +54,10 @@ class PromptBuilder:
             "passed_checks": passed_items,
             "instructions": (
                 "Provide a JSON response with the following keys:\n"
-                "- executive_summary: A concise 2-sentence summary of website health.\n"
-                "- key_strengths: Array of strings describing passed checks.\n"
-                "- prioritized_issues: Array of strings describing failed checks in order of severity.\n"
-                "- action_plan: Array of concrete step-by-step developer recommendations."
+                "- executive_summary: A 2-3 sentence conversational executive summary speaking directly to the website owner/developer in a natural, human voice in clear English.\n"
+                "- key_strengths: Array of strings highlighting what the website does great in friendly, natural English.\n"
+                "- prioritized_issues: Array of strings explaining the key issues in order of priority like a human expert explaining to a peer.\n"
+                "- action_plan: Array of practical, step-by-step developer recommendations in plain, helpful English."
             )
         }
 

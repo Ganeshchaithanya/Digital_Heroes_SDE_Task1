@@ -1,3 +1,0 @@
-"""
-PAGEPULSE Backend Test Suite
-"""
