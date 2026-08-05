@@ -42,7 +42,12 @@ class EvaluationEngine:
                 continue
 
             rule_score = self._compute_rule_score(policy, observed_val)
-            passed = rule_score >= 0.85  # 85%+ score is considered passed
+            
+            # Rule passes if rule_score >= 85% AND observed value does not violate strict 0 max bounds
+            if policy.max_value == 0 and isinstance(observed_val, (int, float)) and observed_val > 0:
+                passed = False
+            else:
+                passed = rule_score >= 0.85
 
             category = policy.category
             category_total_counts[category] += 1
@@ -104,7 +109,6 @@ class EvaluationEngine:
             # Min bound penalty check
             if policy.min_value is not None and value < policy.min_value:
                 diff = policy.min_value - value
-                # Slight variance gets partial credit
                 span = policy.min_value if policy.min_value > 0 else 100
                 ratio = max(0.0, 1.0 - (diff / span))
                 return round(ratio, 2)
@@ -112,9 +116,12 @@ class EvaluationEngine:
             # Max bound penalty check
             if policy.max_value is not None and value > policy.max_value:
                 diff = value - policy.max_value
-                # Example: Title 61 vs max 60 -> diff=1, span=60 -> 1 - 1/60 = 0.98 (98% partial credit!)
-                span = policy.max_value if policy.max_value > 0 else 100
-                ratio = max(0.0, 1.0 - (diff / span))
+                if policy.max_value == 0:
+                    # Penalty for 0-max rules (e.g. missing ALT images)
+                    ratio = max(0.0, 1.0 - (diff * 0.2))  # 20% deduction per missing image
+                else:
+                    span = policy.max_value
+                    ratio = max(0.0, 1.0 - (diff / span))
                 return round(ratio, 2)
 
             return 1.0
