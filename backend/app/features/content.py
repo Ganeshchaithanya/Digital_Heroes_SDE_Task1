@@ -15,7 +15,8 @@ class ContentFeatureExtractor:
     @staticmethod
     def extract(document: PageDocument) -> Dict[str, Any]:
         total_images = len(document.images)
-        missing_alt = sum(1 for img in document.images if not img.has_alt)
+        # Missing ALT is counted ONLY for content-bearing non-decorative images
+        missing_alt = sum(1 for img in document.images if not img.has_alt and not img.is_decorative)
         
         internal_links = sum(1 for link in document.links if link.is_internal)
         external_links = sum(1 for link in document.links if not link.is_internal)

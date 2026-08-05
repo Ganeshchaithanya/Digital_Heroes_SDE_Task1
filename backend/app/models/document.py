@@ -9,6 +9,7 @@ class ImageInfo(BaseModel):
     src: str
     alt: Optional[str] = None
     has_alt: bool = False
+    is_decorative: bool = False
 
 
 class LinkInfo(BaseModel):
@@ -25,3 +26,5 @@ class PageDocument(BaseModel):
     images: List[ImageInfo] = Field(default_factory=list)
     links: List[LinkInfo] = Field(default_factory=list)
     raw_text: str = ""
+    has_canonical: bool = False
+    has_robots_meta: bool = False

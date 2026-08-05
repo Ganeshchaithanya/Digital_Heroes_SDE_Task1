@@ -1,6 +1,6 @@
 """
 Evaluation Engine.
-Evaluates FeatureVector against loaded PolicyRules deterministically.
+Evaluates FeatureVector against loaded PolicyRules with graduated penalty math.
 No AI.
 """
 from typing import List, Dict, Any
@@ -13,8 +13,16 @@ from app.observability.logger import logger
 
 class EvaluationEngine:
     """
-    Evaluates observed feature metrics against policy rules.
+    Evaluates observed feature metrics against policy rules with partial credit scoring.
     """
+
+    # Category Weights for Overall Score Computation
+    CATEGORY_WEIGHTS: Dict[Category, float] = {
+        Category.SEO: 0.35,
+        Category.PERFORMANCE: 0.25,
+        Category.ACCESSIBILITY: 0.25,
+        Category.CONTENT: 0.15,
+    }
 
     def __init__(self, policies: List[PolicyRule]):
         self.policies = policies
@@ -23,10 +31,9 @@ class EvaluationEngine:
         findings: List[Finding] = []
         features_dict = feature_vector.model_dump()
 
-        category_totals: Dict[Category, int] = {cat: 0 for cat in Category}
-        category_weights: Dict[Category, int] = {cat: 0 for cat in Category}
-        category_earned_weights: Dict[Category, int] = {cat: 0 for cat in Category}
+        category_policy_scores: Dict[Category, List[float]] = {cat: [] for cat in Category}
         category_passed_counts: Dict[Category, int] = {cat: 0 for cat in Category}
+        category_total_counts: Dict[Category, int] = {cat: 0 for cat in Category}
 
         for policy in self.policies:
             observed_val = features_dict.get(policy.feature)
@@ -34,15 +41,13 @@ class EvaluationEngine:
                 logger.warning(f"Feature '{policy.feature}' requested by policy '{policy.name}' not found in FeatureVector.")
                 continue
 
-            passed = self._check_pass(policy, observed_val)
+            rule_score = self._compute_rule_score(policy, observed_val)
+            passed = rule_score >= 0.85  # 85%+ score is considered passed
 
             category = policy.category
-            weight = policy.weight
-
-            category_totals[category] += 1
-            category_weights[category] += weight
+            category_total_counts[category] += 1
+            category_policy_scores[category].append(rule_score)
             if passed:
-                category_earned_weights[category] += weight
                 category_passed_counts[category] += 1
 
             finding = Finding(
@@ -53,37 +58,35 @@ class EvaluationEngine:
                 expected_value=policy.expected_display,
                 passed=passed,
                 recommendation=policy.recommendation,
-                weight=weight
+                weight=policy.weight
             )
             findings.append(finding)
 
-        # Compute Category Scores & Overall Weighted Score
+        # Compute Category Scores
         category_scores: Dict[Category, CategoryScore] = {}
-        total_possible_weights = 0
-        total_earned_weights = 0
-
         for cat in Category:
-            total_cnt = category_totals[cat]
-            if total_cnt > 0:
-                tot_weight = category_weights[cat]
-                earned_weight = category_earned_weights[cat]
-                score_val = round((earned_weight / tot_weight) * 100) if tot_weight > 0 else 100
-
-                total_possible_weights += tot_weight
-                total_earned_weights += earned_weight
+            scores_list = category_policy_scores[cat]
+            if scores_list:
+                avg_ratio = sum(scores_list) / len(scores_list)
+                cat_score_val = round(avg_ratio * 100)
             else:
-                score_val = 100
+                cat_score_val = 100
 
             category_scores[cat] = CategoryScore(
                 category=cat,
-                score=score_val,
+                score=cat_score_val,
                 passed_count=category_passed_counts[cat],
-                total_count=total_cnt
+                total_count=category_total_counts[cat]
             )
 
-        overall_score = round((total_earned_weights / total_possible_weights) * 100) if total_possible_weights > 0 else 100
+        # Compute Weighted Overall Score
+        weighted_sum = sum(
+            category_scores[cat].score * self.CATEGORY_WEIGHTS[cat]
+            for cat in Category
+        )
+        overall_score = round(weighted_sum)
 
-        logger.info(f"Evaluation complete. Overall Score: {overall_score}/100. Category scores: {category_scores}")
+        logger.info(f"Graduated Evaluation complete. Overall Score: {overall_score}/100. Category scores: {category_scores}")
 
         return EvaluationResult(
             overall_score=overall_score,
@@ -92,20 +95,37 @@ class EvaluationEngine:
         )
 
     @staticmethod
-    def _check_pass(policy: PolicyRule, value: Any) -> bool:
-        if policy.min_value is not None and isinstance(value, (int, float)):
-            if value < policy.min_value:
-                return False
-        if policy.max_value is not None and isinstance(value, (int, float)):
-            if value > policy.max_value:
-                return False
+    def _compute_rule_score(policy: PolicyRule, value: Any) -> float:
+        """
+        Computes a continuous score ratio between 0.0 and 1.0 for a rule.
+        Supports partial credit for minor numerical bounds deviations.
+        """
+        if isinstance(value, (int, float)):
+            # Min bound penalty check
+            if policy.min_value is not None and value < policy.min_value:
+                diff = policy.min_value - value
+                # Slight variance gets partial credit
+                span = policy.min_value if policy.min_value > 0 else 100
+                ratio = max(0.0, 1.0 - (diff / span))
+                return round(ratio, 2)
+
+            # Max bound penalty check
+            if policy.max_value is not None and value > policy.max_value:
+                diff = value - policy.max_value
+                # Example: Title 61 vs max 60 -> diff=1, span=60 -> 1 - 1/60 = 0.98 (98% partial credit!)
+                span = policy.max_value if policy.max_value > 0 else 100
+                ratio = max(0.0, 1.0 - (diff / span))
+                return round(ratio, 2)
+
+            return 1.0
+
         if policy.exact_value is not None:
-            if value != policy.exact_value:
-                return False
+            return 1.0 if value == policy.exact_value else 0.0
+
         if policy.allowed_values is not None:
-            if value not in policy.allowed_values:
-                return False
+            return 1.0 if value in policy.allowed_values else 0.0
+
         if policy.disallowed_values is not None:
-            if value in policy.disallowed_values:
-                return False
-        return True
+            return 0.0 if value in policy.disallowed_values else 1.0
+
+        return 1.0

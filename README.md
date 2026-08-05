@@ -19,13 +19,15 @@ The platform performs all measurements deterministically. AI is used only to exp
 - **URL Validation**: Syntax checking, protocol scheme normalization (`http`/`https`), and SSRF network restriction.
 - **HTTP Inspection**: Measured response latency, status codes, and HTTP headers via `httpx`.
 - **HTML Parsing**: Robust extraction of titles, meta descriptions, headings (H1-H6), paragraphs, images, and links via `BeautifulSoup4` & `lxml`.
+- **Smart Image ALT Parsing**: Decorative images (`alt=""`), presentation images (`role="presentation"`, `aria-hidden="true"`), and inline icons are recognized so accessibility is evaluated accurately without over-reporting issues.
 - **Feature Extraction**: Quantitative metric calculation into strongly typed `FeatureVector` models.
-- **Policy-Based Evaluation**: Dynamic rules evaluation using versioned JSON policy standards (`policies/v1/*.json`).
+- **Graduated Penalty Scoring Engine**: Partial credit scoring for minor numerical range variances (e.g. title length 61 vs max 60 incurs a minor 2% deduction rather than a catastrophic binary failure).
+- **Expandable Category Rule Inspection**: Interactive UI drawers displaying rule-by-rule status (`✓ Passed`, `⚠️ Variance`, `❌ Issue`).
 - **Technical Metrics Dashboard**: Real-time display of response latency, image ALT coverage, heading counts, and word count.
 - **AI Executive Summary (Groq)**: Friendly human English executive insights, key strengths, prioritized issues, and action plans powered by Groq LLM (`llama-3.3-70b-versatile`).
 - **AI Verification Layer**: Strict Pydantic schema validation and factual numerical integrity checks.
-- **Responsive React UI**: Clean, modern glassmorphism interface built with React 18, TypeScript, and Tailwind CSS.
-- **Structured API**: Clean FastAPI REST API exposing `POST /api/v1/inspect`.
+- **Mandatory Digital Heroes Footer**: Persistent footer on all pages with hyperlink pointing to `https://digitalheroesco.com`.
+- **Responsive React UI**: Clean, modern interface built with React 18, TypeScript, and Tailwind CSS.
 
 ---
 
@@ -48,11 +50,30 @@ Inspection Service
  ├──────── Document Parser
  ├──────── Feature Extraction
  ├──────── Policy Loader
- ├──────── Evaluation Engine
+ ├──────── Evaluation Engine (Graduated Scoring)
  ├──────── Evidence Generator
  ├──────── AI Service (Optional & Fail-safe)
  └──────── Response Builder
 ```
+
+---
+
+## 🧮 Scoring Methodology & Computation Formulas
+
+The Evaluation Engine computes scores deterministically using weighted category formulas and proportional penalty functions.
+
+### 1. Proportional Penalty Math (Partial Credit)
+For rules with numerical range bounds (such as Title Length: 30–60 chars), minor variances receive partial credit instead of a binary zero:
+
+$$\text{Deviation Ratio} = \max\left(0.0, 1.0 - \frac{|\text{Observed Value} - \text{Bound}|}{\text{Span}}\right)$$
+
+*Example*: Title length of 61 characters (1 char over 60):  
+$$\text{Score Ratio} = 1.0 - \frac{1}{60} = 0.98 \quad (98\% \text{ Pass Credit})$$
+
+### 2. Category Weights for Overall Score
+Category scores are aggregated into the Overall Health Score using explicit weights:
+
+$$\text{Overall Score} = (\text{SEO} \times 0.35) + (\text{Performance} \times 0.25) + (\text{Accessibility} \times 0.25) + (\text{Content} \times 0.15)$$
 
 ---
 
@@ -77,49 +98,6 @@ Inspection Service
 
 ### AI
 - Groq Cloud API (`llama-3.3-70b-versatile`)
-
----
-
-## Project Structure
-
-```text
-Digital_Heroes_SDE_Task1/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/inspect.py            # FastAPI Endpoint
-│   │   ├── services/inspection_service.py # Service Layer Facade
-│   │   ├── shared/                      # Constants, Enums, Exceptions, Helpers
-│   │   ├── models/                      # Pydantic Domain Models
-│   │   ├── validation/url_validator.py  # Validation Layer
-│   │   ├── inspection/engine.py         # Network Fetcher
-│   │   ├── parser/html_parser.py        # BeautifulSoup4 Parser
-│   │   ├── features/                    # SEO, Performance & Content Extractors
-│   │   ├── policies/                    # Policy Loader & Schema Validation
-│   │   │   └── v1/*.json                # JSON Policy Standards
-│   │   ├── evaluation/                  # Scoring & Evidence Generator
-│   │   ├── ai/                          # PromptBuilder, GroqProvider, Verifier
-│   │   └── observability/logger.py      # Structured Logger
-│   ├── requirements.txt
-│   └── .env
-├── frontend/
-│   ├── src/
-│   │   ├── components/                  # Header & Footer Layout
-│   │   ├── features/inspection/components/
-│   │   │   ├── UrlInputForm.tsx         # Search Bar & Presets
-│   │   │   ├── ScoreGauge.tsx           # Health Score Gauge
-│   │   │   ├── CategoryBreakdown.tsx    # Category Progress Cards
-│   │   │   ├── TechnicalMetricsGrid.tsx # Technical Metrics Grid
-│   │   │   ├── IssuesAccordion.tsx      # Issues & Action Plan
-│   │   │   └── AiSummaryCard.tsx        # Groq AI Executive Insights
-│   │   ├── services/api.ts              # Axios Client
-│   │   ├── types/inspection.ts          # TypeScript Types
-│   │   ├── App.tsx                      # Dashboard Container
-│   │   └── index.css                    # Tailwind CSS Styles
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── tailwind.config.js
-└── README.md
-```
 
 ---
 
@@ -180,52 +158,6 @@ HTTP_TIMEOUT_SECONDS=10
 }
 ```
 
-#### Example Response
-```json
-{
-  "url": "https://example.com/",
-  "technical_metrics": {
-    "title_length": 14,
-    "meta_description_length": 0,
-    "h1_count": 1,
-    "h2_count": 0,
-    "total_images_count": 0,
-    "missing_alt_images_count": 0,
-    "word_count": 19,
-    "internal_links_count": 0,
-    "external_links_count": 1,
-    "response_time_ms": 515.18,
-    "status_code": 200
-  },
-  "scores": {
-    "seo": 38,
-    "performance": 100,
-    "accessibility": 100,
-    "content": 0,
-    "overall": 57
-  },
-  "issues": [
-    {
-      "issue": "meta_description",
-      "category": "seo",
-      "severity": "warning",
-      "observed_value": 0,
-      "expected_value": "70 to 160 characters",
-      "recommendation": "Provide a meta description between 70 and 160 characters to summarize page content effectively."
-    }
-  ],
-  "recommendations": [
-    "Provide a meta description between 70 and 160 characters to summarize page content effectively."
-  ],
-  "ai_summary": {
-    "executive_summary": "Your website, https://example.com/, has an overall score of 57, indicating room for improvement in SEO areas...",
-    "key_strengths": ["Fast response time", "Optimal H1 heading count"],
-    "prioritized_issues": ["Title length is too short", "Meta description is missing"],
-    "action_plan": ["Update page title tag to 30-60 characters", "Add meta description tag"]
-  }
-}
-```
-
 ---
 
 ## Evaluation Policies
@@ -235,33 +167,9 @@ The application evaluates websites using deterministic JSON policies stored in `
 - **Title Length**: `title_length.json` (Expected: 30 to 60 characters)
 - **Meta Description**: `meta_description.json` (Expected: 70 to 160 characters)
 - **H1 Count**: `h1_count.json` (Expected: Exactly 1 H1 tag)
-- **Image ALT**: `image_alt.json` (Expected: 0 missing ALT attributes)
+- **Image ALT**: `image_alt.json` (Expected: 0 missing ALT attributes on content images)
 - **Response Time**: `response_time.json` (Expected: Under 2000 ms)
 - **Word Count**: `word_count.json` (Expected: At least 300 words)
-
----
-
-## AI Pipeline
-
-```text
-EvidenceBundle
-      │
-      ▼
-Prompt Builder
-      │
-      ▼
-Groq API (llama-3.3-70b-versatile)
-      │
-      ▼
-Verifier (Fact Checker)
-      │
-      ▼
-Executive Summary
-```
-
-- The AI **never computes metrics or scores**.
-- It only explains deterministic evidence in friendly, natural human English.
-- If AI fails or is disabled, the core technical metrics and scores return 100% intact.
 
 ---
 
@@ -269,17 +177,6 @@ Executive Summary
 
 - **Frontend**: Deploy on **Vercel** (Root: `frontend`, Framework: `Vite`, Build: `npm run build`).
 - **Backend**: Deploy on **Render** (Root: `backend`, Build: `pip install -r requirements.txt`, Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
-
----
-
-## Future Improvements
-
-- Advanced Accessibility Audits (WCAG 2.1 compliance checks)
-- Core Web Vitals & Performance Insights
-- Multi-page Web Crawling
-- Historical Inspection Reports & Trend Analytics
-- PDF Report Export
-- Google Lighthouse API Integration
 
 ---
 
@@ -291,4 +188,4 @@ MIT License.
 
 ## Built For
 
-Built for the **Digital Heroes Software Development Internship Task**.
+Built for <a href="https://digitalheroesco.com" target="_blank" rel="noopener noreferrer">Digital Heroes Training Task</a>

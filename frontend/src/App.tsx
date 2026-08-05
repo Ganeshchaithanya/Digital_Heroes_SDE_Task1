@@ -90,7 +90,7 @@ export const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ScoreGauge score={data.scores.overall} />
               <div className="md:col-span-2">
-                <CategoryBreakdown scores={data.scores} />
+                <CategoryBreakdown scores={data.scores} issues={data.issues} />
               </div>
             </div>
 
