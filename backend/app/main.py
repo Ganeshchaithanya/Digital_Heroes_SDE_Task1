@@ -2,6 +2,7 @@
 PAGEPULSE FastAPI Main Application Entrypoint.
 """
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1.inspect import router as v1_router
@@ -17,7 +18,7 @@ app = FastAPI(
 # Enable CORS for Frontend development and production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Production can restrict to frontend URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -25,6 +26,17 @@ app.add_middleware(
 
 # Include API Routers
 app.include_router(v1_router, prefix=settings.API_V1_STR)
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "project": settings.PROJECT_NAME,
+        "status": "online",
+        "health_check": "/health",
+        "api_docs": "/docs",
+        "inspect_endpoint": f"{settings.API_V1_STR}/inspect"
+    }
 
 
 @app.get("/health", tags=["Health"])
