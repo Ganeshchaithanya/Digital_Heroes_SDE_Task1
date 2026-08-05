@@ -9,7 +9,7 @@ import { IssuesAccordion } from './features/inspection/components/IssuesAccordio
 import { AiSummaryCard } from './features/inspection/components/AiSummaryCard';
 import { inspectUrl } from './services/api';
 import { InspectionResponse } from './types/inspection';
-import { AlertCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [data, setData] = useState<InspectionResponse | null>(null);
@@ -36,49 +36,60 @@ export const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       <Header />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
         <UrlInputForm onInspect={handleInspect} isLoading={isLoading} />
 
+        {/* Error / Invalid URL Banner */}
         {error && (
-          <div className="max-w-3xl mx-auto my-6 p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-sm flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" />
+          <div className="my-6 p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-sm flex items-center space-x-3">
+            <XCircle className="w-6 h-6 flex-shrink-0 text-rose-400" />
             <div>
-              <p className="font-bold">Inspection Request Failed</p>
+              <p className="font-bold text-base">URL Validity Status: ❌ INVALID URL / UNREACHABLE</p>
               <p className="text-xs text-rose-400 mt-0.5">{error}</p>
             </div>
           </div>
         )}
 
+        {/* Inspection Results Dashboard */}
         {data && (
-          <div className="space-y-8 mt-10 animate-fade-in">
-            {/* Header URL Details */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-800">
-              <div>
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inspected URL</div>
-                <div className="flex items-center space-x-2 text-xl font-bold text-white mt-1">
-                  <span className="truncate max-w-xl">{data.url}</span>
-                  <a
-                    href={data.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-slate-400 hover:text-cyan-400 transition"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+          <div className="space-y-6 mt-8">
+            {/* Validity Status Banner */}
+            <div className={`p-4 rounded-xl border flex items-center justify-between ${
+              data.technical_metrics.status_code === 200
+                ? 'bg-emerald-950/50 border-emerald-800/80 text-emerald-300'
+                : 'bg-amber-950/50 border-amber-800/80 text-amber-300'
+            }`}>
+              <div className="flex items-center space-x-3">
+                {data.technical_metrics.status_code === 200 ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-400 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-6 h-6 text-amber-400 flex-shrink-0" />
+                )}
+                <div>
+                  <div className="font-bold text-base flex items-center space-x-2">
+                    <span>Website Validity Status:</span>
+                    <span className={data.technical_metrics.status_code === 200 ? 'text-emerald-400' : 'text-amber-400'}>
+                      {data.technical_metrics.status_code === 200 ? '✅ VALID & ACCESSIBLE (HTTP 200 OK)' : `⚠️ ACCESSIBLE WITH HTTP STATUS ${data.technical_metrics.status_code}`}
+                    </span>
+                  </div>
+                  <div className="text-xs opacity-90 mt-0.5 flex items-center space-x-2">
+                    <span className="font-mono">{data.url}</span>
+                    <a href={data.url} target="_blank" rel="noreferrer" className="underline hover:text-white inline-flex items-center">
+                      <ExternalLink className="w-3 h-3 ml-1" />
+                    </a>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-4 sm:mt-0 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
-                HTTP {data.technical_metrics.status_code} • {data.technical_metrics.response_time_ms}ms
+              <div className="text-right text-xs font-mono">
+                <div>Latency: {data.technical_metrics.response_time_ms} ms</div>
               </div>
             </div>
 
             {/* Score & Breakdown Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-1">
-                <ScoreGauge score={data.scores.overall} />
-              </div>
-              <div className="lg:col-span-4 flex items-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <ScoreGauge score={data.scores.overall} />
+              <div className="md:col-span-2">
                 <CategoryBreakdown scores={data.scores} />
               </div>
             </div>
