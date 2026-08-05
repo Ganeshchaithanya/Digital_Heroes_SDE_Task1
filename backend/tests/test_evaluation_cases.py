@@ -4,6 +4,7 @@ Unit Tests for PAGEPULSE Evaluation Engine:
 - Case 2: Non-Healthy Website 1 (SEO & Content Failures)
 - Case 3: Non-Healthy Website 2 (Accessibility & Performance Failures)
 """
+# pyrefly: ignore [missing-import]
 import pytest
 from app.models.inspection import InspectionResult
 from app.parser.html_parser import HTMLParser
