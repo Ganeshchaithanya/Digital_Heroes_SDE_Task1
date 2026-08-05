@@ -5,7 +5,13 @@ Does NOT parse HTML content.
 import time
 import httpx
 from app.models.inspection import InspectionResult
-from app.shared.exceptions import InspectionFetchError
+from app.shared.exceptions import (
+    InspectionFetchError,
+    RequestTimeoutError,
+    DNSFailureError,
+    ConnectionRefusedError,
+    SSLError
+)
 from app.core.config import settings
 from app.observability.logger import logger
 
@@ -55,10 +61,29 @@ class InspectionEngine:
 
         except httpx.TimeoutException as e:
             logger.error(f"Timeout inspecting URL {url}: {e}")
-            raise InspectionFetchError(
-                f"Webpage request timed out after {self.timeout_seconds} seconds.",
+            raise RequestTimeoutError(
+                f"Request timed out after {self.timeout_seconds} seconds.",
+                details={"url": url, "timeout_seconds": self.timeout_seconds}
+            ) from e
+        except httpx.SSLError as e:
+            logger.error(f"SSL certificate error inspecting URL {url}: {e}")
+            raise SSLError(
+                "SSL certificate validation failed for target domain.",
                 details={"url": url, "error": str(e)}
             ) from e
+        except httpx.ConnectError as e:
+            err_msg = str(e).lower()
+            logger.error(f"Connection error inspecting URL {url}: {e}")
+            if "name or service not known" in err_msg or "getaddrinfo failed" in err_msg or "dns" in err_msg:
+                raise DNSFailureError(
+                    "Unable to resolve domain name. Check domain spelling.",
+                    details={"url": url, "error": str(e)}
+                ) from e
+            else:
+                raise ConnectionRefusedError(
+                    "Target server refused connection or domain is unreachable.",
+                    details={"url": url, "error": str(e)}
+                ) from e
         except httpx.HTTPError as e:
             logger.error(f"HTTP error inspecting URL {url}: {e}")
             raise InspectionFetchError(

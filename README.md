@@ -16,18 +16,30 @@ The platform performs all measurements deterministically. AI is used only to exp
 
 ## Features
 
-- **URL Validation**: Syntax checking, protocol scheme normalization (`http`/`https`), and SSRF network restriction.
-- **HTTP Inspection**: Measured response latency, status codes, and HTTP headers via `httpx`.
-- **HTML Parsing**: Robust extraction of titles, meta descriptions, headings (H1-H6), paragraphs, images, and links via `BeautifulSoup4` & `lxml`.
+- **Validation vs. Inspection Separation**: Syntactically valid URLs (e.g. `https://localhost.com`) that fail network fetch display `✔ URL Valid | ✖ Website Unreachable` instead of mislabeling valid URL strings.
+- **Error Taxonomy & Status Mapping**: Specialized exceptions for DNS failure, connection refusal, SSL errors, request timeouts, and protocol restrictions.
+- **Live Pipeline Stepper UI**: Animated 6-step progress stepper demonstrating live execution of inspection stages in the frontend dashboard.
 - **Smart Image ALT Parsing**: Decorative images (`alt=""`), presentation images (`role="presentation"`, `aria-hidden="true"`), and inline icons are recognized so accessibility is evaluated accurately without over-reporting issues.
-- **Feature Extraction**: Quantitative metric calculation into strongly typed `FeatureVector` models.
 - **Graduated Penalty Scoring Engine**: Partial credit scoring for minor numerical range variances (e.g. title length 61 vs max 60 incurs a minor 2% deduction rather than a catastrophic binary failure).
 - **Expandable Category Rule Inspection**: Interactive UI drawers displaying rule-by-rule status (`✓ Passed`, `⚠️ Variance`, `❌ Issue`).
-- **Technical Metrics Dashboard**: Real-time display of response latency, image ALT coverage, heading counts, and word count.
 - **AI Executive Summary (Groq)**: Friendly human English executive insights, key strengths, prioritized issues, and action plans powered by Groq LLM (`llama-3.3-70b-versatile`).
-- **AI Verification Layer**: Strict Pydantic schema validation and factual numerical integrity checks.
 - **Mandatory Digital Heroes Footer**: Persistent footer on all pages with hyperlink pointing to `https://digitalheroesco.com`.
-- **Responsive React UI**: Clean, modern interface built with React 18, TypeScript, and Tailwind CSS.
+
+---
+
+## 🚦 Status Mapping Taxonomy
+
+| Situation | UI Status | HTTP Code / Exception |
+| --- | --- | --- |
+| Malformed URL | `❌ Invalid URL Format` | HTTP 400 (`INVALID_URL_FORMAT`) |
+| Unsupported scheme | `❌ Unsupported Protocol` | HTTP 400 (`UNSUPPORTED_PROTOCOL`) |
+| Private IP Restricted | `❌ Restricted Network Access` | HTTP 400 (`RESTRICTED_NETWORK_ACCESS`) |
+| DNS lookup failed | `❌ Domain Not Found` | HTTP 502 (`DOMAIN_NOT_FOUND`) |
+| Connection refused | `❌ Server Unreachable` | HTTP 502 (`SERVER_UNREACHABLE`) |
+| SSL Error | `❌ SSL Certificate Error` | HTTP 502 (`SSL_ERROR`) |
+| Request timeout | `⚠ Request Timed Out` | HTTP 504 (`REQUEST_TIMED_OUT`) |
+| HTTP 404 / 403 / 500 | `⚠ HTTP status code` | Serves report with status indicator |
+| HTTP 200 | `✅ Website Reachable` | Serves complete inspection report |
 
 ---
 
@@ -37,7 +49,7 @@ The platform performs all measurements deterministically. AI is used only to exp
 User
  │
  ▼
-React Frontend
+React Frontend (Pipeline Stepper)
  │
  ▼
 FastAPI API Endpoint
@@ -67,12 +79,7 @@ For rules with numerical range bounds (such as Title Length: 30–60 chars), min
 
 $$\text{Deviation Ratio} = \max\left(0.0, 1.0 - \frac{|\text{Observed Value} - \text{Bound}|}{\text{Span}}\right)$$
 
-*Example*: Title length of 61 characters (1 char over 60):  
-$$\text{Score Ratio} = 1.0 - \frac{1}{60} = 0.98 \quad (98\% \text{ Pass Credit})$$
-
 ### 2. Category Weights for Overall Score
-Category scores are aggregated into the Overall Health Score using explicit weights:
-
 $$\text{Overall Score} = (\text{SEO} \times 0.35) + (\text{Performance} \times 0.25) + (\text{Accessibility} \times 0.25) + (\text{Content} \times 0.15)$$
 
 ---
@@ -113,13 +120,7 @@ cd Digital_Heroes_SDE_Task1
 ```bash
 cd backend
 python -m venv .venv
-
-# Activate Virtual Environment:
-# On Windows:
 .\.venv\Scripts\Activate.ps1
-# On Linux/Mac:
-source .venv/bin/activate
-
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
@@ -133,50 +134,16 @@ npm run dev
 
 ---
 
-## Environment Variables
-
-Create a `.env` file inside `backend/` directory:
-
-```env
-PROJECT_NAME=PAGEPULSE
-API_V1_STR=/api/v1
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
-HTTP_TIMEOUT_SECONDS=10
-```
-
----
-
 ## API Documentation
 
 ### `POST /api/v1/inspect`
 
-#### Example Request
+#### Request
 ```json
 {
   "url": "https://example.com"
 }
 ```
-
----
-
-## Evaluation Policies
-
-The application evaluates websites using deterministic JSON policies stored in `backend/app/policies/v1/`:
-
-- **Title Length**: `title_length.json` (Expected: 30 to 60 characters)
-- **Meta Description**: `meta_description.json` (Expected: 70 to 160 characters)
-- **H1 Count**: `h1_count.json` (Expected: Exactly 1 H1 tag)
-- **Image ALT**: `image_alt.json` (Expected: 0 missing ALT attributes on content images)
-- **Response Time**: `response_time.json` (Expected: Under 2000 ms)
-- **Word Count**: `word_count.json` (Expected: At least 300 words)
-
----
-
-## Deployment
-
-- **Frontend**: Deploy on **Vercel** (Root: `frontend`, Framework: `Vite`, Build: `npm run build`).
-- **Backend**: Deploy on **Render** (Root: `backend`, Build: `pip install -r requirements.txt`, Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
 
 ---
 
